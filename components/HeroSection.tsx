@@ -1,11 +1,13 @@
-﻿"use client";
+"use client";
 
 import { useState, FormEvent } from "react";
 import {
   calculateExpressionNumber,
   calculateLifePath,
+  calculatePersonalCycle,
   ExpressionResult,
   LifePathResult,
+  PersonalCycle,
 } from "@/lib/numerology";
 import { getArchetype } from "@/lib/archetypes";
 import WhopPaywall from "@/components/WhopPaywall";
@@ -19,6 +21,7 @@ export default function HeroSection() {
   const [error, setError] = useState<string | null>(null);
   const [expression, setExpression] = useState<ExpressionResult | null>(null);
   const [lifePath, setLifePath] = useState<LifePathResult | null>(null);
+  const [cycle, setCycle] = useState<PersonalCycle | null>(null);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -36,8 +39,10 @@ export default function HeroSection() {
     try {
       const expr = calculateExpressionNumber(businessName);
       const lp = calculateLifePath(birthDate);
+      const pc = calculatePersonalCycle(birthDate);
       setExpression(expr);
       setLifePath(lp);
+      setCycle(pc);
       setStep("reveal");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -93,7 +98,7 @@ export default function HeroSection() {
         }}
       >
         Your business name and birth date carry a wealth signature. See it in
-        under a minute â€” free.
+        under a minute - free.
       </p>
 
       {step === "form" && (
@@ -140,8 +145,8 @@ export default function HeroSection() {
         </form>
       )}
 
-      {step === "reveal" && expression && lifePath && (
-        <RevealAndPaywall expression={expression} lifePath={lifePath} />
+      {step === "reveal" && expression && lifePath && cycle && (
+        <RevealAndPaywall expression={expression} lifePath={lifePath} cycle={cycle} />
       )}
     </section>
   );
@@ -150,15 +155,17 @@ export default function HeroSection() {
 function RevealAndPaywall({
   expression,
   lifePath,
+  cycle,
 }: {
   expression: ExpressionResult;
   lifePath: LifePathResult;
+  cycle: PersonalCycle;
 }) {
   const archetype = getArchetype(lifePath.lifePathNumber);
   const hasWealthFlag = expression.wealthFlags.length > 0;
 
   return (
-    <div style={{ width: "100%", maxWidth: 640, textAlign: "center" }}>
+    <div style={{ width: "100%", maxWidth: 720, textAlign: "center" }}>
       <NumberSeal
         number={expression.expressionNumber}
         highlighted={hasWealthFlag || expression.isMasterNumber}
@@ -190,23 +197,171 @@ function RevealAndPaywall({
             marginBottom: "1.5rem",
           }}
         >
-          {expression.wealthFlags.map((f) => f.label).join(" Â· ")}
+          {expression.wealthFlags.map((f) => f.label).join(" | ")}
         </div>
       )}
+
+      <TimingSnapshot cycle={cycle} />
+
+      <GrowthCalendarTeaser />
 
       <p
         style={{
           color: "rgba(247,245,240,0.55)",
           fontSize: 14,
           maxWidth: 440,
-          margin: "0 auto 0.5rem",
+          margin: "2rem auto 0.5rem",
         }}
       >
-        Your full Founder Archetype, Growth Calendar, and AI Wealth
+        Your full Founder Archetype, 12-month Growth Calendar, and AI Wealth
         Consultant are still locked.
       </p>
 
       <WhopPaywall />
+    </div>
+  );
+}
+
+function TimingSnapshot({ cycle }: { cycle: PersonalCycle }) {
+  const stats = [
+    { label: "Personal Year", value: cycle.personalYear },
+    { label: "Personal Month", value: cycle.personalMonth },
+    { label: "Personal Day", value: cycle.personalDay },
+  ];
+
+  return (
+    <div style={{ margin: "2rem 0 0" }}>
+      <p
+        style={{
+          color: "rgba(247,245,240,0.45)",
+          fontSize: 11,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          marginBottom: 10,
+        }}
+      >
+        Your live timing snapshot - free
+      </p>
+      <div
+        className="timing-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 10,
+        }}
+      >
+        <style>{`
+          @media (max-width: 480px) {
+            .timing-grid { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
+        {stats.map((s) => (
+          <div
+            key={s.label}
+            style={{
+              background: "var(--navy-900)",
+              border: "1px solid var(--line)",
+              borderRadius: 12,
+              padding: "14px 10px",
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "var(--font-display)",
+                color: "var(--gold-400)",
+                fontSize: 26,
+                margin: "0 0 4px",
+              }}
+            >
+              {s.value}
+            </p>
+            <p style={{ color: "rgba(247,245,240,0.5)", fontSize: 11, margin: 0 }}>
+              {s.label}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Sample-data teaser only. Values below are static placeholders, not
+// derived from user input, and exist purely to preview the shape of
+// the locked Growth Calendar. No real premium content is rendered here.
+const SAMPLE_CALENDAR_MONTHS = [
+  { month: "Jan", tag: "Build" },
+  { month: "Feb", tag: "Launch" },
+  { month: "Mar", tag: "Scale" },
+  { month: "Apr", tag: "Hold" },
+];
+
+function GrowthCalendarTeaser() {
+  return (
+    <div style={{ margin: "2rem 0 0", position: "relative" }}>
+      <p
+        style={{
+          color: "rgba(247,245,240,0.45)",
+          fontSize: 11,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          marginBottom: 10,
+        }}
+      >
+        Growth calendar preview - sample data
+      </p>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 8,
+          filter: "blur(2px)",
+          opacity: 0.55,
+          pointerEvents: "none",
+          userSelect: "none",
+        }}
+      >
+        {SAMPLE_CALENDAR_MONTHS.map((m) => (
+          <div
+            key={m.month}
+            style={{
+              background: "var(--navy-900)",
+              border: "1px solid var(--line)",
+              borderRadius: 10,
+              padding: "10px 6px",
+            }}
+          >
+            <p style={{ color: "var(--ivory-50)", fontSize: 12, margin: "0 0 2px" }}>
+              {m.month}
+            </p>
+            <p style={{ color: "var(--gold-400)", fontSize: 11, margin: 0 }}>
+              {m.tag}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <span
+          style={{
+            background: "var(--navy-950)",
+            border: "1px solid var(--gold-400)",
+            color: "var(--gold-400)",
+            fontSize: 12,
+            fontWeight: 600,
+            padding: "6px 14px",
+            borderRadius: 999,
+          }}
+        >
+          Full 12-month calendar unlocks below
+        </span>
+      </div>
     </div>
   );
 }
@@ -260,4 +415,3 @@ const ctaStyle: React.CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
 };
-
