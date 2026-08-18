@@ -10,7 +10,9 @@ import {
   PersonalCycle,
 } from "@/lib/numerology";
 import { getArchetype } from "@/lib/archetypes";
+import { getChineseZodiac } from "@/lib/chineseZodiac";
 import WhopPaywall from "@/components/WhopPaywall";
+import ShareCard from "@/components/ShareCard";
 
 type Step = "form" | "reveal";
 type ReadingStatus = "idle" | "loading" | "ready" | "error";
@@ -245,7 +247,19 @@ function RevealAndPaywall({
         </div>
       )}
 
+      <ChineseZodiacBadge birthDate={lifePath.birthDate} />
+
       <AIReading status={readingStatus} reading={reading} />
+
+      <div style={{ margin: "0 0 1.5rem" }}>
+        <ShareCard
+          businessName={expression.input}
+          expressionNumber={expression.expressionNumber}
+          archetypeName={archetype.name}
+          chineseZodiacAnimal={getChineseZodiac(lifePath.birthDate).animal}
+          wealthFlagLabel={hasWealthFlag ? expression.wealthFlags[0].label : undefined}
+        />
+      </div>
 
       <TimingSnapshot cycle={cycle} />
 
@@ -329,6 +343,35 @@ function AIReading({
           write-up.
         </p>
       )}
+    </div>
+  );
+}
+
+function ChineseZodiacBadge({ birthDate }: { birthDate: string }) {
+  const zodiac = getChineseZodiac(birthDate);
+  return (
+    <div
+      style={{
+        margin: "0 0 1.5rem",
+        maxWidth: 480,
+        marginLeft: "auto",
+        marginRight: "auto",
+        textAlign: "center",
+      }}
+    >
+      <p
+        style={{
+          color: "var(--gold-300)",
+          fontFamily: "var(--font-display)",
+          fontSize: 18,
+          margin: "0 0 4px",
+        }}
+      >
+        Year of the {zodiac.animal}
+      </p>
+      <p style={{ color: "rgba(247,245,240,0.55)", fontSize: 13, margin: 0 }}>
+        {zodiac.trait}
+      </p>
     </div>
   );
 }

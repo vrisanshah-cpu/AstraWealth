@@ -8,9 +8,11 @@ import {
 } from "@/lib/numerology";
 import { getArchetype } from "@/lib/archetypes";
 import { CORE_NUMBER_MEANINGS, CYCLE_MEANINGS } from "@/lib/numerologyMeanings";
-import { Sun, Compass, MessageCircle } from "lucide-react";
+import { Sun, Compass, MessageCircle, FileText, Flame } from "lucide-react";
+import { getChineseZodiac } from "@/lib/chineseZodiac";
+import ShareCard from "@/components/ShareCard";
 
-type Tab = "daily" | "chart" | "consultant";
+type Tab = "daily" | "chart" | "consultant" | "monthly";
 
 interface ChartInfo {
   businessName: string;
@@ -23,12 +25,43 @@ interface ChatMessage {
 }
 
 const STORAGE_KEY = "astrawealth_chart_info";
+const STREAK_KEY = "astrawealth_streak";
+
+function updateStreak(): number {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const raw = window.localStorage.getItem(STREAK_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+
+    if (parsed && parsed.lastVisit === today) {
+      return parsed.streak;
+    }
+
+    let nextStreak = 1;
+    if (parsed) {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      if (parsed.lastVisit === yesterday) {
+        nextStreak = parsed.streak + 1;
+      }
+    }
+
+    window.localStorage.setItem(
+      STREAK_KEY,
+      JSON.stringify({ lastVisit: today, streak: nextStreak })
+    );
+    return nextStreak;
+  } catch {
+    return 0;
+  }
+}
 const MAX_CHAT_MESSAGES = 15;
 
 export default function DashboardClient({ email }: { email: string }) {
   const [tab, setTab] = useState<Tab>("daily");
   const [chartInfo, setChartInfo] = useState<ChartInfo | null>(null);
   const [hydrated, setHydrated] = useState(false);
+
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
     try {
@@ -37,6 +70,7 @@ export default function DashboardClient({ email }: { email: string }) {
     } catch {
       // ignore
     }
+    setStreak(updateStreak());
     setHydrated(true);
   }, []);
 
@@ -66,6 +100,7 @@ export default function DashboardClient({ email }: { email: string }) {
     daily: <Sun size={16} />,
     chart: <Compass size={16} />,
     consultant: <MessageCircle size={16} />,
+    monthly: <FileText size={16} />,
   };
 
   return (
@@ -125,9 +160,17 @@ export default function DashboardClient({ email }: { email: string }) {
             </p>
           )}
         </div>
-        <p style={{ color: "rgba(247,245,240,0.5)", fontSize: 13, margin: 0 }}>
-          {email}
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {streak > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--gold-400)", fontSize: 13, fontWeight: 600 }}>
+              <Flame size={16} />
+              {streak} day{streak === 1 ? "" : "s"}
+            </div>
+          )}
+          <p style={{ color: "rgba(247,245,240,0.5)", fontSize: 13, margin: 0 }}>
+            {email}
+          </p>
+        </div>
       </header>
 
       <nav
@@ -144,6 +187,7 @@ export default function DashboardClient({ email }: { email: string }) {
           [
             ["daily", "Daily Intelligence"],
             ["chart", "Wealth Chart"],
+            ["monthly", "Monthly Report"],
             ["consultant", "AI Consultant"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
@@ -193,6 +237,7 @@ export default function DashboardClient({ email }: { email: string }) {
             {tab === "chart" && (
               <WealthChart chartInfo={chartInfo} onReset={resetChartInfo} />
             )}
+            {tab === "monthly" && <MonthlyReportPanel chartInfo={chartInfo} />}
             {tab === "consultant" && <ConsultantChat chartInfo={chartInfo} />}
           </>
         )}
@@ -342,6 +387,7 @@ function WealthChart({
   const lp = calculateLifePath(chartInfo.birthDate);
   const pc = calculatePersonalCycle(chartInfo.birthDate);
   const archetype = getArchetype(lp.lifePathNumber);
+  const zodiac = getChineseZodiac(chartInfo.birthDate);
 
   return (
     <div>
@@ -411,6 +457,30 @@ function WealthChart({
         </p>
       </div>
 
+      <div
+        style={{
+          background: "var(--navy-950)",
+          border: "1px solid var(--line)",
+          borderRadius: 12,
+          padding: "1.25rem",
+          marginBottom: 16,
+        }}
+      >
+        <p
+          style={{
+            color: "var(--gold-300)",
+            fontFamily: "var(--font-display)",
+            fontSize: 18,
+            margin: "0 0 4px",
+          }}
+        >
+          Year of the {zodiac.animal}
+        </p>
+        <p style={{ color: "rgba(247,245,240,0.65)", fontSize: 13, margin: 0 }}>
+          {zodiac.trait}
+        </p>
+      </div>
+
       {expr.wealthFlags.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           {expr.wealthFlags.map((f) => (
@@ -441,6 +511,16 @@ function WealthChart({
           ))}
         </div>
       )}
+
+      <div style={{ marginBottom: 12 }}>
+        <ShareCard
+          businessName={chartInfo.businessName}
+          expressionNumber={expr.expressionNumber}
+          archetypeName={archetype.name}
+          chineseZodiacAnimal={zodiac.animal}
+          wealthFlagLabel={expr.wealthFlags.length > 0 ? expr.wealthFlags[0].label : undefined}
+        />
+      </div>
 
       <button
         onClick={onReset}
@@ -493,6 +573,157 @@ function StatBlock({
         <p style={{ color: "rgba(247,245,240,0.65)", fontSize: 12, lineHeight: 1.4, margin: 0 }}>
           {meaning}
         </p>
+      )}
+    </div>
+  );
+}
+
+function monthKey(): string {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+
+function MonthlyReportPanel({ chartInfo }: { chartInfo: ChartInfo }) {
+  const [customRequest, setCustomRequest] = useState("");
+  const [report, setReport] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const cacheKey = "astrawealth_monthly_report_" + monthKey();
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(cacheKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setReport(parsed.report);
+        setCustomRequest(parsed.customRequest || "");
+      }
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleGenerate() {
+    setStatus("loading");
+    try {
+      const expr = calculateExpressionNumber(chartInfo.businessName);
+      const lp = calculateLifePath(chartInfo.birthDate);
+      const pc = calculatePersonalCycle(chartInfo.birthDate);
+      const archetype = getArchetype(lp.lifePathNumber);
+      const zodiac = getChineseZodiac(chartInfo.birthDate);
+
+      const res = await fetch("/api/monthly-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName: chartInfo.businessName,
+          expressionNumber: expr.expressionNumber,
+          lifePathNumber: lp.lifePathNumber,
+          archetypeName: archetype.name,
+          personalYear: pc.personalYear,
+          personalMonth: pc.personalMonth,
+          chineseZodiacAnimal: zodiac.animal,
+          customRequest,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || typeof data.report !== "string") throw new Error("bad");
+
+      setReport(data.report);
+      setStatus("idle");
+      try {
+        window.localStorage.setItem(
+          cacheKey,
+          JSON.stringify({ report: data.report, customRequest })
+        );
+      } catch {
+        // ignore
+      }
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div>
+      <p
+        style={{
+          color: "var(--gold-400)",
+          fontSize: 12,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          marginBottom: 12,
+        }}
+      >
+        Monthly Report
+      </p>
+      <p style={{ color: "rgba(247,245,240,0.55)", fontSize: 13, marginBottom: 16 }}>
+        Tell us what to focus on this month - pricing, a hire, expansion timing,
+        anything specific - and we'll fold it into your report.
+      </p>
+
+      <textarea
+        value={customRequest}
+        maxLength={500}
+        placeholder="e.g. Should I raise prices this quarter? Is now a good time to hire?"
+        onChange={(e) => setCustomRequest(e.target.value)}
+        rows={3}
+        style={{
+          ...inputStyle,
+          width: "100%",
+          resize: "vertical",
+          marginBottom: 12,
+          fontFamily: "inherit",
+        }}
+      />
+
+      <button
+        onClick={handleGenerate}
+        disabled={status === "loading"}
+        className="aw-btn"
+        style={{
+          ...ctaStyle,
+          opacity: status === "loading" ? 0.7 : 1,
+          cursor: status === "loading" ? "default" : "pointer",
+          marginBottom: 20,
+        }}
+      >
+        {status === "loading"
+          ? "Generating..."
+          : report
+          ? "Regenerate this month's report"
+          : "Generate my monthly report"}
+      </button>
+
+      {status === "loading" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="aw-skeleton" style={{ height: 16, width: "96%" }} />
+          <div className="aw-skeleton" style={{ height: 16, width: "90%" }} />
+          <div className="aw-skeleton" style={{ height: 16, width: "82%" }} />
+          <div className="aw-skeleton" style={{ height: 16, width: "60%" }} />
+        </div>
+      )}
+
+      {status === "error" && (
+        <p style={{ color: "#e8a2a2", fontSize: 13 }}>
+          Couldn't generate the report. Try again in a moment.
+        </p>
+      )}
+
+      {status === "idle" && report && (
+        <div
+          style={{
+            background: "var(--navy-950)",
+            border: "1px solid var(--line)",
+            borderRadius: 12,
+            padding: "1.25rem",
+          }}
+        >
+          <p style={{ color: "var(--ivory-50)", fontSize: 15, lineHeight: 1.7, margin: 0 }}>
+            {report}
+          </p>
+        </div>
       )}
     </div>
   );
