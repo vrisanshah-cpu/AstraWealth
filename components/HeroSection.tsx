@@ -13,6 +13,7 @@ import { getArchetype } from "@/lib/archetypes";
 import WhopPaywall from "@/components/WhopPaywall";
 
 type Step = "form" | "reveal";
+type ReadingStatus = "idle" | "loading" | "ready" | "error";
 
 export default function HeroSection() {
   const [step, setStep] = useState<Step>("form");
@@ -22,6 +23,38 @@ export default function HeroSection() {
   const [expression, setExpression] = useState<ExpressionResult | null>(null);
   const [lifePath, setLifePath] = useState<LifePathResult | null>(null);
   const [cycle, setCycle] = useState<PersonalCycle | null>(null);
+  const [reading, setReading] = useState<string | null>(null);
+  const [readingStatus, setReadingStatus] = useState<ReadingStatus>("idle");
+
+  async function fetchReading(expr: ExpressionResult, lp: LifePathResult) {
+    setReadingStatus("loading");
+    const archetype = getArchetype(lp.lifePathNumber);
+    try {
+      const res = await fetch("/api/reading", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName: expr.input,
+          expressionNumber: expr.expressionNumber,
+          isMasterNumber: expr.isMasterNumber,
+          wealthFlagLabels: expr.wealthFlags.map((f) => f.label),
+          lifePathNumber: lp.lifePathNumber,
+          archetypeName: archetype.name,
+          archetypeLine: archetype.line,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Request failed");
+
+      const data = await res.json();
+      if (typeof data.reading !== "string") throw new Error("Bad response");
+
+      setReading(data.reading);
+      setReadingStatus("ready");
+    } catch {
+      setReadingStatus("error");
+    }
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -44,6 +77,7 @@ export default function HeroSection() {
       setLifePath(lp);
       setCycle(pc);
       setStep("reveal");
+      fetchReading(expr, lp);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     }
@@ -146,7 +180,13 @@ export default function HeroSection() {
       )}
 
       {step === "reveal" && expression && lifePath && cycle && (
-        <RevealAndPaywall expression={expression} lifePath={lifePath} cycle={cycle} />
+        <RevealAndPaywall
+          expression={expression}
+          lifePath={lifePath}
+          cycle={cycle}
+          reading={reading}
+          readingStatus={readingStatus}
+        />
       )}
     </section>
   );
@@ -156,10 +196,14 @@ function RevealAndPaywall({
   expression,
   lifePath,
   cycle,
+  reading,
+  readingStatus,
 }: {
   expression: ExpressionResult;
   lifePath: LifePathResult;
   cycle: PersonalCycle;
+  reading: string | null;
+  readingStatus: ReadingStatus;
 }) {
   const archetype = getArchetype(lifePath.lifePathNumber);
   const hasWealthFlag = expression.wealthFlags.length > 0;
@@ -201,6 +245,8 @@ function RevealAndPaywall({
         </div>
       )}
 
+      <AIReading status={readingStatus} reading={reading} />
+
       <TimingSnapshot cycle={cycle} />
 
       <GrowthCalendarTeaser />
@@ -218,6 +264,71 @@ function RevealAndPaywall({
       </p>
 
       <WhopPaywall />
+    </div>
+  );
+}
+
+function AIReading({
+  status,
+  reading,
+}: {
+  status: ReadingStatus;
+  reading: string | null;
+}) {
+  if (status === "idle") return null;
+
+  return (
+    <div
+      style={{
+        margin: "0 0 2rem",
+        maxWidth: 560,
+        marginLeft: "auto",
+        marginRight: "auto",
+        background: "var(--navy-900)",
+        border: "1px solid var(--line)",
+        borderRadius: 14,
+        padding: "1.25rem 1.5rem",
+        textAlign: "left",
+      }}
+    >
+      <p
+        style={{
+          color: "rgba(247,245,240,0.45)",
+          fontSize: 11,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          marginBottom: 10,
+        }}
+      >
+        Your founder reading
+      </p>
+
+      {status === "loading" && (
+        <p style={{ color: "rgba(247,245,240,0.55)", fontSize: 14, margin: 0 }}>
+          Reading your wealth signature...
+        </p>
+      )}
+
+      {status === "ready" && reading && (
+        <p
+          style={{
+            color: "var(--ivory-50)",
+            fontSize: 15,
+            lineHeight: 1.6,
+            margin: 0,
+          }}
+        >
+          {reading}
+        </p>
+      )}
+
+      {status === "error" && (
+        <p style={{ color: "rgba(247,245,240,0.55)", fontSize: 14, margin: 0 }}>
+          Your reading is taking longer than usual to generate. Your numbers
+          above are still accurate - try refreshing in a moment for the full
+          write-up.
+        </p>
+      )}
     </div>
   );
 }
