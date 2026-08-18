@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --navy-950: #0a0f1e;
   --navy-900: #0f1729;
   --navy-800: #16213b;
@@ -30,4 +30,3 @@ body {
 button {
   font-family: inherit;
 }
-
