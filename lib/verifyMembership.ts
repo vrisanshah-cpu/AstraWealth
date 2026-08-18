@@ -1,6 +1,17 @@
 const PRODUCT_ID = "prod_rmcf99hfae56K";
 
 export async function verifyMembership(email: string): Promise<boolean> {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const demoEmails = (process.env.DEMO_ACCESS_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (demoEmails.includes(normalizedEmail)) {
+    return true;
+  }
+
   const apiKey = process.env.WHOP_API_KEY;
   const companyId = process.env.WHOP_COMPANY_ID;
 
@@ -8,7 +19,6 @@ export async function verifyMembership(email: string): Promise<boolean> {
     throw new Error("Whop API credentials are not configured.");
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
   let after: string | null = null;
 
   for (let page = 0; page < 20; page++) {
