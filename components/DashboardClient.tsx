@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, useRef, FormEvent } from "react";
 import {
   calculateExpressionNumber,
   calculateLifePath,
@@ -15,7 +15,13 @@ interface ChartInfo {
   birthDate: string;
 }
 
+interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+
 const STORAGE_KEY = "astrawealth_chart_info";
+const MAX_CHAT_MESSAGES = 15;
 
 export default function DashboardClient({ email }: { email: string }) {
   const [tab, setTab] = useState<Tab>("daily");
@@ -134,7 +140,7 @@ export default function DashboardClient({ email }: { email: string }) {
             {tab === "chart" && (
               <WealthChart chartInfo={chartInfo} onReset={resetChartInfo} />
             )}
-            {tab === "consultant" && <ConsultantPlaceholder />}
+            {tab === "consultant" && <ConsultantChat chartInfo={chartInfo} />}
           </>
         )}
       </main>
@@ -325,23 +331,161 @@ function WealthChart({
   );
 }
 
-function ConsultantPlaceholder() {
+function ConsultantChat({ chartInfo }: { chartInfo: ChartInfo }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const limitReached = messages.filter((m) => m.role === "user").length >= MAX_CHAT_MESSAGES;
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = input.trim();
+    if (!trimmed || sending || limitReached) return;
+
+    setError(null);
+    const nextMessages = [...messages, { role: "user" as const, text: trimmed }];
+    setMessages(nextMessages);
+    setInput("");
+    setSending(true);
+
+    try {
+      const expr = calculateExpressionNumber(chartInfo.businessName);
+      const lp = calculateLifePath(chartInfo.birthDate);
+      const pc = calculatePersonalCycle(chartInfo.birthDate);
+      const archetype = getArchetype(lp.lifePathNumber);
+
+      const res = await fetch("/api/consultant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: trimmed,
+          history: nextMessages.slice(0, -1),
+          context: {
+            businessName: chartInfo.businessName,
+            expressionNumber: expr.expressionNumber,
+            lifePathNumber: lp.lifePathNumber,
+            archetypeName: archetype.name,
+            personalYear: pc.personalYear,
+            personalMonth: pc.personalMonth,
+            personalDay: pc.personalDay,
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || typeof data.reply !== "string") {
+        throw new Error(data.error || "Request failed");
+      }
+
+      setMessages((prev) => [...prev, { role: "assistant", text: data.reply }]);
+    } catch {
+      setError("Couldn't get a reply. Try again in a moment.");
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
-    <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: 480 }}>
       <p
         style={{
           color: "var(--gold-400)",
-          fontFamily: "var(--font-display)",
-          fontSize: 22,
-          marginBottom: 8,
+          fontSize: 12,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          marginBottom: 12,
         }}
       >
         AI Wealth Consultant
       </p>
-      <p style={{ color: "rgba(247,245,240,0.55)", fontSize: 14 }}>
-        Coming soon - ask hyper-personalized business timing questions based
-        on your chart.
-      </p>
+
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          paddingRight: 4,
+          marginBottom: 12,
+        }}
+      >
+        {messages.length === 0 && (
+          <p style={{ color: "rgba(247,245,240,0.5)", fontSize: 14 }}>
+            Ask a specific business timing question - e.g. "Is this a good
+            week to close a deal?"
+          </p>
+        )}
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            style={{
+              alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+              maxWidth: "80%",
+              background: m.role === "user" ? "var(--gold-400)" : "var(--navy-800)",
+              color: m.role === "user" ? "var(--navy-950)" : "var(--ivory-50)",
+              borderRadius: 12,
+              padding: "10px 14px",
+              fontSize: 14,
+              lineHeight: 1.5,
+            }}
+          >
+            {m.text}
+          </div>
+        ))}
+        {sending && (
+          <div
+            style={{
+              alignSelf: "flex-start",
+              color: "rgba(247,245,240,0.5)",
+              fontSize: 13,
+            }}
+          >
+            Thinking...
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {error && (
+        <p style={{ color: "#e8a2a2", fontSize: 13, marginBottom: 8 }}>{error}</p>
+      )}
+
+      {limitReached ? (
+        <p style={{ color: "rgba(247,245,240,0.5)", fontSize: 13 }}>
+          You've reached this session's question limit. Refresh to start a
+          new session.
+        </p>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ display: "flex", gap: 8 }}>
+          <input
+            type="text"
+            value={input}
+            maxLength={500}
+            placeholder="Ask about timing, deals, hiring..."
+            onChange={(e) => setInput(e.target.value)}
+            style={{ ...inputStyle, flex: 1 }}
+          />
+          <button
+            type="submit"
+            disabled={sending || !input.trim()}
+            style={{
+              ...ctaStyle,
+              opacity: sending || !input.trim() ? 0.6 : 1,
+              cursor: sending || !input.trim() ? "default" : "pointer",
+            }}
+          >
+            Send
+          </button>
+        </form>
+      )}
     </div>
   );
 }
