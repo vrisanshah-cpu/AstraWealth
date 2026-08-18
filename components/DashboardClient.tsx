@@ -8,6 +8,7 @@ import {
 } from "@/lib/numerology";
 import { getArchetype } from "@/lib/archetypes";
 import { CORE_NUMBER_MEANINGS, CYCLE_MEANINGS } from "@/lib/numerologyMeanings";
+import { Sun, Compass, MessageCircle } from "lucide-react";
 
 type Tab = "daily" | "chart" | "consultant";
 
@@ -57,8 +58,38 @@ export default function DashboardClient({ email }: { email: string }) {
     setChartInfo(null);
   }
 
+  const archetypeName = chartInfo
+    ? getArchetype(calculateLifePath(chartInfo.birthDate).lifePathNumber).name
+    : null;
+
+  const tabIcons: Record<Tab, React.ReactNode> = {
+    daily: <Sun size={16} />,
+    chart: <Compass size={16} />,
+    consultant: <MessageCircle size={16} />,
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--navy-950)" }}>
+      <style>{`
+        .aw-tab { transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+        .aw-tab:hover { color: var(--gold-300) !important; border-color: var(--gold-300) !important; }
+        .aw-btn { transition: opacity 0.15s ease, transform 0.1s ease; }
+        .aw-btn:hover:not(:disabled) { opacity: 0.88; }
+        .aw-btn:active:not(:disabled) { transform: scale(0.98); }
+        .aw-nav-scroll { overflow-x: auto; scrollbar-width: none; }
+        .aw-nav-scroll::-webkit-scrollbar { display: none; }
+        @keyframes aw-shimmer {
+          0% { background-position: -200px 0; }
+          100% { background-position: 200px 0; }
+        }
+        .aw-skeleton {
+          background: linear-gradient(90deg, var(--navy-800) 25%, var(--navy-900) 37%, var(--navy-800) 63%);
+          background-size: 400px 100%;
+          animation: aw-shimmer 1.4s ease-in-out infinite;
+          border-radius: 6px;
+        }
+      `}</style>
+
       <header
         style={{
           display: "flex",
@@ -68,24 +99,39 @@ export default function DashboardClient({ email }: { email: string }) {
           borderBottom: "1px solid var(--line)",
         }}
       >
-        <p
-          style={{
-            color: "var(--gold-400)",
-            letterSpacing: "0.16em",
-            fontSize: 12,
-            fontWeight: 600,
-            textTransform: "uppercase",
-            margin: 0,
-          }}
-        >
-          AstraWealth Dashboard
-        </p>
+        <div>
+          <p
+            style={{
+              color: "var(--gold-400)",
+              letterSpacing: "0.16em",
+              fontSize: 12,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              margin: "0 0 2px",
+            }}
+          >
+            AstraWealth Dashboard
+          </p>
+          {archetypeName && (
+            <p
+              style={{
+                color: "var(--ivory-50)",
+                fontFamily: "var(--font-display)",
+                fontSize: 18,
+                margin: 0,
+              }}
+            >
+              Welcome back, {archetypeName}
+            </p>
+          )}
+        </div>
         <p style={{ color: "rgba(247,245,240,0.5)", fontSize: 13, margin: 0 }}>
           {email}
         </p>
       </header>
 
       <nav
+        className="aw-nav-scroll"
         style={{
           display: "flex",
           gap: 4,
@@ -103,8 +149,13 @@ export default function DashboardClient({ email }: { email: string }) {
         ).map(([key, label]) => (
           <button
             key={key}
+            className="aw-tab"
             onClick={() => setTab(key)}
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              whiteSpace: "nowrap",
               background: tab === key ? "var(--navy-900)" : "transparent",
               color: tab === key ? "var(--gold-400)" : "rgba(247,245,240,0.55)",
               border:
@@ -117,6 +168,7 @@ export default function DashboardClient({ email }: { email: string }) {
               cursor: "pointer",
             }}
           >
+            {tabIcons[key]}
             {label}
           </button>
         ))}
@@ -192,7 +244,7 @@ function ChartSetupForm({ onSave }: { onSave: (info: ChartInfo) => void }) {
           onChange={(e) => setBirthDate(e.target.value)}
           style={inputStyle}
         />
-        <button type="submit" style={ctaStyle}>
+        <button type="submit" className="aw-btn" style={ctaStyle}>
           Save and continue
         </button>
       </form>
@@ -259,9 +311,11 @@ function DailyIntelligence({ chartInfo }: { chartInfo: ChartInfo }) {
         Today's Wealth Vibration
       </p>
       {status === "loading" && (
-        <p style={{ color: "rgba(247,245,240,0.55)" }}>
-          Reading today's numbers...
-        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="aw-skeleton" style={{ height: 16, width: "95%" }} />
+          <div className="aw-skeleton" style={{ height: 16, width: "88%" }} />
+          <div className="aw-skeleton" style={{ height: 16, width: "60%" }} />
+        </div>
       )}
       {status === "ready" && reading && (
         <p style={{ color: "var(--ivory-50)", fontSize: 16, lineHeight: 1.7 }}>
@@ -390,6 +444,7 @@ function WealthChart({
 
       <button
         onClick={onReset}
+        className="aw-btn"
         style={{
           ...ctaStyle,
           background: "transparent",
@@ -587,6 +642,7 @@ function ConsultantChat({ chartInfo }: { chartInfo: ChartInfo }) {
           />
           <button
             type="submit"
+            className="aw-btn"
             disabled={sending || !input.trim()}
             style={{
               ...ctaStyle,
