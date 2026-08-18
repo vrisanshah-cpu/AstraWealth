@@ -285,6 +285,7 @@ function WealthChart({
 }) {
   const expr = calculateExpressionNumber(chartInfo.businessName);
   const lp = calculateLifePath(chartInfo.birthDate);
+  const pc = calculatePersonalCycle(chartInfo.birthDate);
   const archetype = getArchetype(lp.lifePathNumber);
 
   return (
@@ -295,31 +296,88 @@ function WealthChart({
           fontSize: 12,
           letterSpacing: "0.12em",
           textTransform: "uppercase",
-          marginBottom: 12,
+          marginBottom: 16,
         }}
       >
         Your Wealth Chart
       </p>
-      <p style={{ color: "var(--ivory-50)", fontSize: 18, marginBottom: 4 }}>
-        Expression Number:{" "}
-        <span style={{ color: "var(--gold-400)" }}>
-          {expr.expressionNumber}
-        </span>
-      </p>
-      <p style={{ color: "var(--ivory-50)", fontSize: 18, marginBottom: 4 }}>
-        Life Path: <span style={{ color: "var(--gold-400)" }}>{lp.lifePathNumber}</span>{" "}
-        - {archetype.name}
-      </p>
-      {expr.wealthFlags.length > 0 && (
-        <p style={{ color: "var(--gold-300)", fontSize: 14, marginTop: 12 }}>
-          {expr.wealthFlags.map((f) => f.label).join(" | ")}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        <StatBlock label="Expression Number" value={String(expr.expressionNumber)} />
+        <StatBlock
+          label="Life Path Number"
+          value={String(lp.lifePathNumber) + (lp.isMasterNumber ? " (master)" : "")}
+        />
+        <StatBlock label="Personal Year" value={String(pc.personalYear)} />
+        <StatBlock label="Personal Month" value={String(pc.personalMonth)} />
+      </div>
+
+      <div
+        style={{
+          background: "var(--navy-950)",
+          border: "1px solid var(--line)",
+          borderRadius: 12,
+          padding: "1.25rem",
+          marginBottom: 16,
+        }}
+      >
+        <p
+          style={{
+            color: "var(--gold-100)",
+            fontFamily: "var(--font-display)",
+            fontSize: 20,
+            margin: "0 0 4px",
+          }}
+        >
+          {archetype.name}
         </p>
+        <p style={{ color: "rgba(247,245,240,0.65)", fontSize: 14, margin: 0 }}>
+          {archetype.line}
+        </p>
+      </div>
+
+      {expr.wealthFlags.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          {expr.wealthFlags.map((f) => (
+            <div
+              key={f.code}
+              style={{
+                background: "var(--navy-950)",
+                border: "1px solid var(--gold-400)",
+                borderRadius: 12,
+                padding: "1rem 1.25rem",
+                marginBottom: 10,
+              }}
+            >
+              <p
+                style={{
+                  color: "var(--gold-400)",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  margin: "0 0 4px",
+                }}
+              >
+                {f.label} (#{f.code})
+              </p>
+              <p style={{ color: "rgba(247,245,240,0.7)", fontSize: 13, margin: 0 }}>
+                {f.description}
+              </p>
+            </div>
+          ))}
+        </div>
       )}
+
       <button
         onClick={onReset}
         style={{
           ...ctaStyle,
-          marginTop: 24,
           background: "transparent",
           border: "1px solid var(--line)",
           color: "rgba(247,245,240,0.6)",
@@ -327,6 +385,33 @@ function WealthChart({
       >
         Edit business name / birth date
       </button>
+    </div>
+  );
+}
+
+function StatBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        background: "var(--navy-950)",
+        border: "1px solid var(--line)",
+        borderRadius: 10,
+        padding: "12px 14px",
+      }}
+    >
+      <p
+        style={{
+          color: "var(--gold-400)",
+          fontFamily: "var(--font-display)",
+          fontSize: 22,
+          margin: "0 0 2px",
+        }}
+      >
+        {value}
+      </p>
+      <p style={{ color: "rgba(247,245,240,0.5)", fontSize: 11, margin: 0 }}>
+        {label}
+      </p>
     </div>
   );
 }
