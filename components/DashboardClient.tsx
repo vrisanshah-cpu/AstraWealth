@@ -7,6 +7,7 @@ import {
   calculatePersonalCycle,
 } from "@/lib/numerology";
 import { getArchetype } from "@/lib/archetypes";
+import { CORE_NUMBER_MEANINGS, CYCLE_MEANINGS } from "@/lib/numerologyMeanings";
 
 type Tab = "daily" | "chart" | "consultant";
 
@@ -310,13 +311,26 @@ function WealthChart({
           marginBottom: 20,
         }}
       >
-        <StatBlock label="Expression Number" value={String(expr.expressionNumber)} />
+        <StatBlock
+          label="Expression Number"
+          value={String(expr.expressionNumber)}
+          meaning={CORE_NUMBER_MEANINGS[expr.expressionNumber]}
+        />
         <StatBlock
           label="Life Path Number"
           value={String(lp.lifePathNumber) + (lp.isMasterNumber ? " (master)" : "")}
+          meaning={CORE_NUMBER_MEANINGS[lp.lifePathNumber]}
         />
-        <StatBlock label="Personal Year" value={String(pc.personalYear)} />
-        <StatBlock label="Personal Month" value={String(pc.personalMonth)} />
+        <StatBlock
+          label="Personal Year"
+          value={String(pc.personalYear)}
+          meaning={CYCLE_MEANINGS[pc.personalYear]}
+        />
+        <StatBlock
+          label="Personal Month"
+          value={String(pc.personalMonth)}
+          meaning={CYCLE_MEANINGS[pc.personalMonth]}
+        />
       </div>
 
       <div
@@ -389,7 +403,15 @@ function WealthChart({
   );
 }
 
-function StatBlock({ label, value }: { label: string; value: string }) {
+function StatBlock({
+  label,
+  value,
+  meaning,
+}: {
+  label: string;
+  value: string;
+  meaning?: string;
+}) {
   return (
     <div
       style={{
@@ -409,9 +431,14 @@ function StatBlock({ label, value }: { label: string; value: string }) {
       >
         {value}
       </p>
-      <p style={{ color: "rgba(247,245,240,0.5)", fontSize: 11, margin: 0 }}>
+      <p style={{ color: "rgba(247,245,240,0.5)", fontSize: 11, margin: "0 0 6px" }}>
         {label}
       </p>
+      {meaning && (
+        <p style={{ color: "rgba(247,245,240,0.65)", fontSize: 12, lineHeight: 1.4, margin: 0 }}>
+          {meaning}
+        </p>
+      )}
     </div>
   );
 }

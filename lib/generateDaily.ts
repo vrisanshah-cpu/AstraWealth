@@ -15,7 +15,7 @@ export async function generateDailyIntelligence(
   const prompt = buildPrompt(input);
 
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" +
     apiKey;
 
   const res = await fetch(url, {
