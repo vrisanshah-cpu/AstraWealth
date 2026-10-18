@@ -11,6 +11,7 @@ import {
 } from "@/lib/numerology";
 import { getArchetype } from "@/lib/archetypes";
 import { getChineseZodiac } from "@/lib/chineseZodiac";
+import { fallbackReading } from "@/lib/fallbackReading";
 import WhopPaywall from "@/components/WhopPaywall";
 import ShareCard from "@/components/ShareCard";
 
@@ -31,19 +32,22 @@ export default function HeroSection() {
   async function fetchReading(expr: ExpressionResult, lp: LifePathResult) {
     setReadingStatus("loading");
     const archetype = getArchetype(lp.lifePathNumber);
+
+    const input = {
+      businessName: expr.input,
+      expressionNumber: expr.expressionNumber,
+      isMasterNumber: expr.isMasterNumber,
+      wealthFlagLabels: expr.wealthFlags.map((f) => f.label),
+      lifePathNumber: lp.lifePathNumber,
+      archetypeName: archetype.name,
+      archetypeLine: archetype.line,
+    };
+
     try {
       const res = await fetch("/api/reading", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          businessName: expr.input,
-          expressionNumber: expr.expressionNumber,
-          isMasterNumber: expr.isMasterNumber,
-          wealthFlagLabels: expr.wealthFlags.map((f) => f.label),
-          lifePathNumber: lp.lifePathNumber,
-          archetypeName: archetype.name,
-          archetypeLine: archetype.line,
-        }),
+        body: JSON.stringify(input),
       });
 
       if (!res.ok) throw new Error("Request failed");
@@ -54,7 +58,11 @@ export default function HeroSection() {
       setReading(data.reading);
       setReadingStatus("ready");
     } catch {
-      setReadingStatus("error");
+      // The server already falls back to a handwritten reading; this covers
+      // the case where the request never reached it at all. This screen has
+      // to earn the upgrade, so it never shows an apology.
+      setReading(fallbackReading(input));
+      setReadingStatus("ready");
     }
   }
 
@@ -341,6 +349,24 @@ function AIReading({
           Your reading is taking longer than usual to generate. Your numbers
           above are still accurate - try refreshing in a moment for the full
           write-up.
+        </p>
+      )}
+
+      {status === "ready" && (
+        <p
+          style={{
+            color: "rgba(247,245,240,0.4)",
+            fontSize: 12,
+            lineHeight: 1.5,
+            margin: "14px 0 0",
+            paddingTop: 12,
+            borderTop: "1px solid var(--line)",
+          }}
+        >
+          AstraWealth is a numerology tool for reflection and entertainment. It
+          is not financial, investment or business advice, and nothing here
+          predicts a result. Make decisions about money with real information
+          about your own situation.
         </p>
       )}
     </div>

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateDailyIntelligence } from "@/lib/generateDaily";
+import { requireMember } from "@/lib/requireMember";
 
 export async function POST(req: NextRequest) {
+  // Paid feature - see lib/requireMember.ts.
+  const denied = requireMember(req);
+  if (denied) return denied;
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {

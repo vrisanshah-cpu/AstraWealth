@@ -1,12 +1,12 @@
-﻿/**
- * AstraWealth â€” Pythagorean Numerology Engine
+/**
+ * AstraWealth -- Pythagorean Numerology Engine
  * -------------------------------------------
- * Pure, dependency-free calculation logic. No side effects, no API calls â€”
+ * Pure, dependency-free calculation logic. No side effects, no API calls --
  * safe to run client-side for the instant "free reveal" moment.
  */
 
 // ---------------------------------------------------------------------------
-// Letter â†’ number map (classic Pythagorean system, 1â€“9 repeating)
+// Letter -> number map (classic Pythagorean system, 1-9 repeating)
 // ---------------------------------------------------------------------------
 const LETTER_VALUES: Record<string, number> = {
   A: 1, J: 1, S: 1,
@@ -25,7 +25,7 @@ const MASTER_NUMBERS = [11, 22, 33];
 
 // Wealth codes AstraWealth calls out specifically in the UI/copy.
 // 33 is treated as a master number stop (see reduceNumber). 51 is a
-// "compound number" in the Chaldean tradition â€” it only ever appears
+// "compound number" in the Chaldean tradition -- it only ever appears
 // as an intermediate sum before final reduction, so it's detected
 // separately (see compoundNumber tracking below).
 export const WEALTH_CODES = {
@@ -83,7 +83,7 @@ function reduceNumber(value: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// Business Namer â€” Expression Number
+// Business Namer -- Expression Number
 // ---------------------------------------------------------------------------
 
 export function calculateExpressionNumber(businessName: string): ExpressionResult {
@@ -144,7 +144,7 @@ export function calculateExpressionNumber(businessName: string): ExpressionResul
 }
 
 // ---------------------------------------------------------------------------
-// Founder Archetype â€” Life Path Number
+// Founder Archetype -- Life Path Number
 // ---------------------------------------------------------------------------
 
 /**
@@ -179,7 +179,7 @@ export function calculateLifePath(birthDate: string): LifePathResult {
 }
 
 // ---------------------------------------------------------------------------
-// Investment Timing Cycles â€” Personal Year / Month / Day
+// Investment Timing Cycles -- Personal Year / Month / Day
 // ---------------------------------------------------------------------------
 
 /**

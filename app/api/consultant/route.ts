@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateConsultantReply, ConsultantMessage } from "@/lib/generateConsultant";
+import { requireMember } from "@/lib/requireMember";
 
 const MAX_MESSAGE_LENGTH = 500;
 
 export async function POST(req: NextRequest) {
+  // Paid feature. Without this check anyone could call it with curl and spend
+  // the account's Gemini budget.
+  const denied = requireMember(req);
+  if (denied) return denied;
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {

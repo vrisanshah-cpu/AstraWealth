@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyMembership } from "@/lib/verifyMembership";
+import {
+  SESSION_COOKIE,
+  SESSION_MAX_AGE_SECONDS,
+  createSessionToken,
+} from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   let body: any;
@@ -23,12 +28,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // The cookie used to be the email in plain text, which meant anyone could
+    // type one. It is now signed - see lib/session.ts.
+    const token = createSessionToken(email);
+    if (!token) {
+      return NextResponse.json(
+        { error: "Sign-in is temporarily unavailable. Please try again shortly." },
+        { status: 503 }
+      );
+    }
+
     const res = NextResponse.json({ success: true });
-    res.cookies.set("aw_session", email.toLowerCase(), {
+    res.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24,
+      maxAge: SESSION_MAX_AGE_SECONDS,
       path: "/",
     });
     return res;

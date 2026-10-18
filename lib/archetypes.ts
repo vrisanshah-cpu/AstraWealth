@@ -1,4 +1,4 @@
-﻿export interface Archetype {
+export interface Archetype {
   name: string;
   line: string;
 }

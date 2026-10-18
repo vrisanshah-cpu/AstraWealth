@@ -242,6 +242,23 @@ export default function DashboardClient({ email }: { email: string }) {
           </>
         )}
       </main>
+
+      <footer
+        style={{
+          maxWidth: 900,
+          margin: "0 auto",
+          padding: "1.5rem 2rem 3rem",
+          color: "rgba(247,245,240,0.35)",
+          fontSize: 12,
+          lineHeight: 1.6,
+          textAlign: "center",
+        }}
+      >
+        AstraWealth is a numerology tool for reflection and entertainment. It is
+        not financial, investment, tax or business advice, and nothing in it
+        predicts a result. Decisions about money are yours to make with real
+        information about your own situation.
+      </footer>
     </div>
   );
 }

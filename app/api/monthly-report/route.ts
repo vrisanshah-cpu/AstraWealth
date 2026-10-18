@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateMonthlyReport } from "@/lib/generateMonthlyReport";
+import { requireMember } from "@/lib/requireMember";
 
 const MAX_REQUEST_LENGTH = 500;
 
 export async function POST(req: NextRequest) {
+  // Paid feature - see lib/requireMember.ts.
+  const denied = requireMember(req);
+  if (denied) return denied;
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
